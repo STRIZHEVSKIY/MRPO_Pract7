@@ -64,18 +64,43 @@ jobs:
             ${htmlBody}
           `;
 
+          // Страница в BookStack под конкретный инцидент (без жёсткой привязки к книге)
           const payload = {
             name: title,
             html: fullHtml
           };
 
+          async function findExistingPage() {
+            const searchUrl = `${process.env.BOOKSTACK_API_URL}/api/pages?filter[name]=${encodeURIComponent(title)}`;
+
+            const response = await fetch(searchUrl, {
+              headers: {
+                'Authorization': `Token ${process.env.BOOKSTACK_API_TOKEN_ID}:${process.env.BOOKSTACK_API_TOKEN_SECRET}`,
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (!response.ok) return null;
+            const data = await response.json();
+            const exactMatch = (data.data || []).find(page => page.name === title);
+            return exactMatch ? exactMatch.id : null;
+          }
+
           async function main() {
             try {
-              const existingPageId = 1; // ID страницы в BookStack, куда всё пишем
+              const existingPageId = await findExistingPage();
 
-              const apiUrl = `${process.env.BOOKSTACK_API_URL}/api/pages/${existingPageId}`;
-              const method = 'PUT';
-              console.log('Updating fixed incident page:', existingPageId);
+              let apiUrl, method;
+              if (existingPageId) {
+                apiUrl = `${process.env.BOOKSTACK_API_URL}/api/pages/${existingPageId}`;
+                method = 'PUT';
+                console.log('Updating existing incident page:', existingPageId);
+              } else {
+                apiUrl = `${process.env.BOOKSTACK_API_URL}/api/pages`;
+                method = 'POST';
+                console.log('Creating new incident page');
+              }
+              
 
               const response = await fetch(apiUrl, {
                 method,
@@ -91,7 +116,8 @@ jobs:
                 console.error('Failed to process incident page:', response.status, errorText);
                 process.exit(1);
               } else {
-                console.log(`Incident page updated successfully with status: ${statusText}`);
+                const actionText = existingPageId ? 'updated' : 'created';
+                console.log(`Incident page ${actionText} successfully with status: ${statusText}`);
               }
             } catch (err) {
               console.error('Request error:', err);
@@ -103,3 +129,4 @@ jobs:
           EOF
 
           node create-page.js
+
