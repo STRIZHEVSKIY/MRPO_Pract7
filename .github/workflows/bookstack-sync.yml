@@ -9,23 +9,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Install Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-
-      - name: Install dependencies
-        run: npm install marked axios
-
-      - name: Sync Issue to BookStack
-        run: node .github/scripts/sync-to-bookstack.js
+      - name: Sync Issue to BookStack via curl
         env:
-          # системный токен GitHub, можно так:
-          GITHUB_TOKEN: ${{ github.token }}
-          # или так, если нужен именно секрет: ${{ secrets.GITHUB_TOKEN }} [web:85][web:88]
           BOOKSTACK_API_URL: ${{ secrets.BOOKSTACK_API_URL }}
           BOOKSTACK_API_TOKEN_ID: ${{ secrets.BOOKSTACK_API_TOKEN_ID }}
           BOOKSTACK_API_TOKEN_SECRET: ${{ secrets.BOOKSTACK_API_TOKEN_SECRET }}
+        run: |
+          TITLE="${{ github.event.issue.title }}"
+          BODY="${{ github.event.issue.body }}"
+
+          # Простейший slug: нижний регистр + дефисы
+          SLUG=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g')
+
+          curl --fail -X POST \
+            "$BOOKSTACK_API_URL/api/pages" \
+            -H "Authorization: Token $BOOKSTACK_API_TOKEN_ID:$BOOKSTACK_API_TOKEN_SECRET" \
+            -H "Content-Type: application/json" \
+            -d @- <<EOF
+          {
+            "name": "$TITLE",
+            "html": "$BODY",
+            "book_id": 1,
+            "slug": "$SLUG"
+          }
+          EOF
