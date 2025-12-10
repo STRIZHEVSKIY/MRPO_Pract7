@@ -12,16 +12,15 @@ const pageContent = marked.parse(issue.body);
 
 async function createOrUpdatePage() {
   try {
-    // POST запрос на создание страницы в BookStack
     const res = await axios.post(`${BOOKSTACK_API_URL}/api/pages`, {
       name: pageTitle,
       html: pageContent,
-      // id книги или раздела можно настроить заранее
       book_id: 1,
       slug: pageTitle.toLowerCase().replace(/ /g, '-')
     }, {
       headers: {
-        Authorization: `Token ${BOOKSTACK_API_TOKEN}`
+        'Authorization': `Bearer ${BOOKSTACK_API_TOKEN}`,
+        'Content-Type': 'application/json'
       }
     });
     console.log('Page created:', res.data);
