@@ -1,35 +1,131 @@
-name: BookStack KCS Integration
+name: BookStack – фиксация инцидентов
 
 on:
   issues:
-    types: [opened, edited, closed]
+    types: [opened, closed, reopened]
 
 jobs:
-  bookstack-sync:
+  createPage:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Sync Issue to BookStack via curl
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Create / update incident page in BookStack
         env:
-          BOOKSTACK_API_URL: ${{ secrets.BOOKSTACK_API_URL }}
           BOOKSTACK_API_TOKEN_ID: ${{ secrets.BOOKSTACK_API_TOKEN_ID }}
           BOOKSTACK_API_TOKEN_SECRET: ${{ secrets.BOOKSTACK_API_TOKEN_SECRET }}
+          BOOKSTACK_API_URL: ${{ secrets.BOOKSTACK_API_URL }}        # https://твой-bookstack-домен
+          BOOKSTACK_BOOK_ID: ${{ secrets.BOOKSTACK_BOOK_ID }}        # ID книги "Фиксация результатов..."
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_STATE: ${{ github.event.issue.state }}
+          ISSUE_ACTION: ${{ github.event.action }}
         run: |
-          TITLE="${{ github.event.issue.title }}"
-          BODY="${{ github.event.issue.body }}"
+          mkdir page-generator
+          cd page-generator
+          npm init -y > /dev/null
+          npm install marked node-fetch@2 > /dev/null
 
-          # Простейший slug: нижний регистр + дефисы
-          SLUG=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g')
+          cat << 'EOF' > create-page.js
+          const fetch = require('node-fetch');
+          const marked = require('marked');
 
-          curl --fail -X POST \
-            "$BOOKSTACK_API_URL/api/pages" \
-            -H "Authorization: Token $BOOKSTACK_API_TOKEN_ID:$BOOKSTACK_API_TOKEN_SECRET" \
-            -H "Content-Type: application/json" \
-            -d @- <<EOF
-          {
-            "name": "$TITLE",
-            "html": "$BODY",
-            "book_id": 1,
-            "slug": "$SLUG"
+          const title = process.env.ISSUE_TITLE;
+          const body = process.env.ISSUE_BODY || 'Нет описания';
+          const url = process.env.ISSUE_URL;
+          const state = process.env.ISSUE_STATE;
+          const action = process.env.ISSUE_ACTION;
+
+          let statusText, statusColor;
+          if (state === 'closed') {
+            statusText = 'ИНЦИДЕНТ ЗАКРЫТ';
+            statusColor = '#d73a49';
+          } else if (state === 'open' && action === 'reopened') {
+            statusText = 'ИНЦИДЕНТ ПЕРЕОТКРЫТ';
+            statusColor = '#0366d6';
+          } else {
+            statusText = 'ИНЦИДЕНТ ОТКРЫТ';
+            statusColor = '#28a745';
           }
+
+          const htmlBody = marked.parse(body || '');
+
+          const fullHtml = `
+            <h1>Фиксация результатов расследования инцидента по производительности сервиса</h1>
+            <div style="background: ${statusColor}; color: white; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+              <strong>Статус инцидента:</strong> ${statusText}
+            </div>
+            <p><strong>Связанная задача GitHub:</strong> <a href="${url}">${url}</a></p>
+            <hr>
+            ${htmlBody}
+          `;
+
+          const payload = {
+            name: title,
+            book_id: process.env.BOOKSTACK_BOOK_ID,
+            html: fullHtml
+          };
+
+          async function findExistingPage() {
+            const searchUrl = `${process.env.BOOKSTACK_API_URL}/api/pages?filter[name]=${encodeURIComponent(title)}`;
+
+            const response = await fetch(searchUrl, {
+              headers: {
+                'Authorization': `Token ${process.env.BOOKSTACK_API_TOKEN_ID}:${process.env.BOOKSTACK_API_TOKEN_SECRET}`,
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (!response.ok) return null;
+            const data = await response.json();
+            const exactMatch = (data.data || []).find(page => page.name === title);
+            return exactMatch ? exactMatch.id : null;
+          }
+
+          async function main() {
+            try {
+              const existingPageId = await findExistingPage();
+
+              let apiUrl, method;
+              if (existingPageId) {
+                apiUrl = `${process.env.BOOKSTACK_API_URL}/api/pages/${existingPageId}`;
+                method = 'PUT';
+                console.log('Updating existing incident page:', existingPageId);
+              } else {
+                apiUrl = `${process.env.BOOKSTACK_API_URL}/api/pages`;
+                method = 'POST';
+                console.log('Creating new incident page');
+              }
+
+              const response = await fetch(apiUrl, {
+                method,
+                headers: {
+                  'Authorization': `Token ${process.env.BOOKSTACK_API_TOKEN_ID}:${process.env.BOOKSTACK_API_TOKEN_SECRET}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+              });
+
+              if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Failed to process incident page:', response.status, errorText);
+                process.exit(1);
+              } else {
+                const actionText = existingPageId ? 'updated' : 'created';
+                console.log(`Incident page ${actionText} successfully with status: ${statusText}`);
+              }
+            } catch (err) {
+              console.error('Request error:', err);
+              process.exit(1);
+            }
+          }
+
+          main();
           EOF
+
+          node create-page.js
