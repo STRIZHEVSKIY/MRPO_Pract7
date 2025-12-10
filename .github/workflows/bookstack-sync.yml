@@ -64,7 +64,7 @@ jobs:
             ${htmlBody}
           `;
 
-          // book_id убран полностью
+          // Страница в BookStack под конкретный инцидент (без жёсткой привязки к книге)
           const payload = {
             name: title,
             html: fullHtml
