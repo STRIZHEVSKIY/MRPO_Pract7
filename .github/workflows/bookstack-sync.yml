@@ -18,7 +18,7 @@ jobs:
         env:
           BOOKSTACK_API_TOKEN_ID: ${{ secrets.BOOKSTACK_API_TOKEN_ID }}
           BOOKSTACK_API_TOKEN_SECRET: ${{ secrets.BOOKSTACK_API_TOKEN_SECRET }}
-          BOOKSTACK_API_URL: ${{ secrets.BOOKSTACK_API_URL }}        # https://твой-bookstack-домен
+          BOOKSTACK_API_URL: ${{ secrets.BOOKSTACK_API_URL }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
@@ -64,9 +64,9 @@ jobs:
             ${htmlBody}
           `;
 
+          // book_id убран полностью
           const payload = {
             name: title,
-            book_id: process.env.BOOKSTACK_BOOK_ID,
             html: fullHtml
           };
 
