@@ -21,10 +21,9 @@ jobs:
       run: npm install marked axios
 
     - name: Sync Issue to BookStack
-      run: |
-        node .github/scripts/sync-to-bookstack.js
+      run: node .github/scripts/sync-to-bookstack.js
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         BOOKSTACK_API_URL: ${{ secrets.BOOKSTACK_API_URL }}
-        BOOKSTACK_API_TOKEN: ${{ secrets.BOOKSTACK_API_TOKEN }}
-        BOOKSTACK_API_USER: ${{ secrets.BOOKSTACK_API_USER }}
+        BOOKSTACK_API_TOKEN_ID: ${{ secrets.BOOKSTACK_API_TOKEN_ID }}
+        BOOKSTACK_API_TOKEN_SECRET: ${{ secrets.BOOKSTACK_API_TOKEN_SECRET }}
