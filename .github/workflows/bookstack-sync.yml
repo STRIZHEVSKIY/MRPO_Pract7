@@ -70,22 +70,12 @@ jobs:
             html: fullHtml
           };
 
-          async function findExistingPage() {
-            const searchUrl = `${process.env.BOOKSTACK_API_URL}/api/pages?filter[name]=${encodeURIComponent(title)}`;
-
-            const response = await fetch(searchUrl, {
-              headers: {
-                'Authorization': `Token ${process.env.BOOKSTACK_API_TOKEN_ID}:${process.env.BOOKSTACK_API_TOKEN_SECRET}`,
-                'Content-Type': 'application/json'
-              }
-            });
-
             if (!response.ok) return null;
             const data = await response.json();
             const exactMatch = (data.data || []).find(page => page.name === title);
             return exactMatch ? exactMatch.id : null;
           }
-
+          const findexistingPageId = 1
           async function main() {
             try {
               const existingPageId = await findExistingPage();
