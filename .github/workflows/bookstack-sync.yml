@@ -19,7 +19,6 @@ jobs:
           BOOKSTACK_API_TOKEN_ID: ${{ secrets.BOOKSTACK_API_TOKEN_ID }}
           BOOKSTACK_API_TOKEN_SECRET: ${{ secrets.BOOKSTACK_API_TOKEN_SECRET }}
           BOOKSTACK_API_URL: ${{ secrets.BOOKSTACK_API_URL }}        # https://твой-bookstack-домен
-          BOOKSTACK_BOOK_ID: ${{ secrets.BOOKSTACK_BOOK_ID }}        # ID книги "Фиксация результатов..."
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
