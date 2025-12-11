@@ -1,3 +1,4 @@
+---
 name: Performance Incident
 about: Report performance issues to automatically generate a BookStack article
 title: "[Performance Incident] "
@@ -28,3 +29,4 @@ body:
     attributes:
       label: "Решение / действия"
       description: "Что сделано или предлагается сделать"
+---
