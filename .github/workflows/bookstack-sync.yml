@@ -19,11 +19,13 @@ jobs:
           BOOKSTACK_API_TOKEN_ID: ${{ secrets.BOOKSTACK_API_TOKEN_ID }}
           BOOKSTACK_API_TOKEN_SECRET: ${{ secrets.BOOKSTACK_API_TOKEN_SECRET }}
           BOOKSTACK_API_URL: ${{ secrets.BOOKSTACK_API_URL }}
+          BOOKSTACK_BOOK_ID: ${{ secrets.BOOKSTACK_BOOK_ID }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
           ISSUE_STATE: ${{ github.event.issue.state }}
           ISSUE_ACTION: ${{ github.event.action }}
+
         run: |
           mkdir page-generator
           cd page-generator
@@ -100,6 +102,12 @@ jobs:
                 method = 'POST';
                 console.log('Creating new incident page');
               }
+              const payload = {
+                name: title,
+                book_id: process.env.BOOKSTACK_BOOK_ID,
+                html: fullHtml
+              };
+
               
 
               const response = await fetch(apiUrl, {
